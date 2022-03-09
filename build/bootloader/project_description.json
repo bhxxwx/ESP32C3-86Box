@@ -1,0 +1,20 @@
+{
+    "project_name":       "bootloader",
+    "project_path":       "E:/EspIDF/components/bootloader/subproject",
+    "build_dir":          "D:/EclipseProject/ESPC3_Client_86Prov/build/bootloader",
+    "config_file":        "D:/EclipseProject/ESPC3_Client_86Prov/sdkconfig",
+    "config_defaults":    "",
+    "app_elf":            "bootloader.elf",
+    "app_bin":            "bootloader.bin",
+    "git_revision":       "v4.3.1-dirty",
+    "target":             "esp32c3",
+    "phy_data_partition": "",
+    "monitor_baud" :      "921600",
+    "monitor_toolprefix": "riscv32-esp-elf-",
+    "config_environment" : {
+        "COMPONENT_KCONFIGS" : "E:/EspIDF/components/efuse/Kconfig;E:/EspIDF/components/esp32c3/Kconfig;E:/EspIDF/components/esp_common/Kconfig;E:/EspIDF/components/esp_system/Kconfig;E:/EspIDF/components/log/Kconfig;E:/EspIDF/components/newlib/Kconfig;E:/EspIDF/components/spi_flash/Kconfig",
+        "COMPONENT_KCONFIGS_PROJBUILD" : "E:/EspIDF/components/bootloader/Kconfig.projbuild;E:/EspIDF/components/esptool_py/Kconfig.projbuild;E:/EspIDF/components/partition_table/Kconfig.projbuild"
+    },
+    "build_components" : [ "bootloader", "bootloader_support", "efuse", "esp32c3", "esp_common", "esp_hw_support", "esp_rom", "esp_system", "esptool_py", "hal", "log", "main", "micro-ecc", "newlib", "partition_table", "riscv", "soc", "spi_flash", "" ],
+    "build_component_paths" : [ "E:/EspIDF/components/bootloader", "E:/EspIDF/components/bootloader_support", "E:/EspIDF/components/efuse", "E:/EspIDF/components/esp32c3", "E:/EspIDF/components/esp_common", "E:/EspIDF/components/esp_hw_support", "E:/EspIDF/components/esp_rom", "E:/EspIDF/components/esp_system", "E:/EspIDF/components/esptool_py", "E:/EspIDF/components/hal", "E:/EspIDF/components/log", "E:/EspIDF/components/bootloader/subproject/main", "E:/EspIDF/components/bootloader/subproject/components/micro-ecc", "E:/EspIDF/components/newlib", "E:/EspIDF/components/partition_table", "E:/EspIDF/components/riscv", "E:/EspIDF/components/soc", "E:/EspIDF/components/spi_flash", "" ]
+}
