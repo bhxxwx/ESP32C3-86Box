@@ -42,6 +42,8 @@ void ProvSet(bool provState,bool factoryMode)
 	}
 }
 
+
+extern void Del_all_node();
 /**
  * @fn void FactoryReset()
  * @brief 恢复工厂设置
@@ -51,8 +53,9 @@ void ProvSet(bool provState,bool factoryMode)
  */
 void FactoryReset()
 {
+	Del_all_node();
 	nvs_flash_erase();
-	nvs_flash_erase_partition("nvs_user");
+//	nvs_flash_erase_partition("nvs_user");
 	esp_restart();
 }
 

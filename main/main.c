@@ -56,7 +56,7 @@
 #define ESP_BLE_MESH_VND_MODEL2_OP_SEND      ESP_BLE_MESH_MODEL_OP_3(0x02, CID_ESP)
 #define ESP_BLE_MESH_VND_MODEL2_OP_STATUS    ESP_BLE_MESH_MODEL_OP_3(0x03, CID_ESP)
 void OP_PROV_Func(void *arg);
-
+void CK_HBTK_Func(void *arg);
 static void echo_task(void *arg);
 //void echo_print()
 static uint8_t dev_uuid[ESP_BLE_MESH_OCTET16_LEN];
@@ -571,21 +571,29 @@ static void example_ble_mesh_custom_model_cb(esp_ble_mesh_model_cb_event_t event
 		case ESP_BLE_MESH_CLIENT_MODEL_RECV_PUBLISH_MSG_EVT:
 		{
 			ESP_LOGI(TAG, "Receive publish message 0x%06x", param->client_recv_publish_msg.opcode);
-			if(param->client_recv_publish_msg.opcode==0xc302e5)
+			if (param->client_recv_publish_msg.opcode == 0xc302e5)
 			{
-				char data[10]={0};
-				char buf[22]={0};
-				uint8_t len=0;
-				data[0]='$';
+				char data[10] = { 0 };
+				char buf[22] = { 0 };
+				uint8_t len = 0;
+				data[0] = '$';
 				for (int i = 0; i < param->client_recv_publish_msg.length; i++)
 				{
-					uint8_t value=*(param->client_recv_publish_msg.msg + i);
-					data[i*2+1]=value;
-					data[i*2+2]=i==param->client_recv_publish_msg.length-1?';':',';
+					uint8_t value = *(param->client_recv_publish_msg.msg + i);
+					data[i * 2 + 1] = value;
+					data[i * 2 + 2] = i == param->client_recv_publish_msg.length - 1 ? ';' : ',';
 				}
-				len=sprintf(buf,"%s\r\n",data);
-				ESP_LOGI(TAG,">>%s",buf);
+				len = sprintf(buf, "%s\r\n", data);
+				ESP_LOGI(TAG, ">>%s", buf);
 				uart_write_bytes(ECHO_UART_PORT_NUM, buf, len);
+				//test func
+				if (*(param->client_recv_publish_msg.msg) == 5)
+				{
+					_lightModel l;
+					l.CMD = *(param->client_recv_publish_msg.msg+1);
+					example_ble_mesh_publish_message(&l);
+				}
+				//end text func
 			}
 			break;
 		}
@@ -736,6 +744,8 @@ void app_main(void)
 	CommandReg("CL_PROV", CL_PROV_Func);
 	CommandReg("RE_FACT", RE_FACT_Func);
 	CommandReg("SE_MSGE", SE_MSGE_Func);
+	CommandReg("CK_HBTK", CK_HBTK_Func);
+//	CommandReg("DL_ALND", CK_HBTK_Func);
 	xTaskCreatePinnedToCore(echo_task, "uart_echo_task", ECHO_TASK_STACK_SIZE, NULL, 10, NULL, 0);
 
 }
@@ -745,7 +755,10 @@ void OP_PROV_Func(void *arg)
 	ProvSet(true, false);
 	WriteToNVS("FactoryMode", 0, NVS_USER_HANDLE);
 }
-
+void CK_HBTK_Func(void *arg)
+{
+	uart_write_bytes(ECHO_UART_PORT_NUM, ">>CMD_OK\r\n", 10);
+}
 static void echo_task(void *arg)
 {
 	uint8_t *data = (uint8_t*) malloc(BUF_SIZE);
