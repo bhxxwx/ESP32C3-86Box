@@ -1,10 +1,3 @@
-/* main.c - Application main entry point */
-
-/*
- * Copyright (c) 2018 Espressif Systems (Shanghai) PTE LTD
- *
- * SPDX-License-Identifier: Apache-2.0
- */
 
 #include <stdio.h>
 #include <string.h>
@@ -58,6 +51,8 @@
 void OP_PROV_Func(void *arg);
 void CK_HBTK_Func(void *arg);
 static void echo_task(void *arg);
+void SE_MSGE_Func(void *arg);
+
 //void echo_print()
 static uint8_t dev_uuid[ESP_BLE_MESH_OCTET16_LEN];
 
@@ -573,7 +568,7 @@ static void example_ble_mesh_custom_model_cb(esp_ble_mesh_model_cb_event_t event
 			ESP_LOGI(TAG, "Receive publish message 0x%06x", param->client_recv_publish_msg.opcode);
 			if (param->client_recv_publish_msg.opcode == 0xc302e5)
 			{
-				char data[10] = { 0 };
+				char data[22] = { 0 };
 				char buf[22] = { 0 };
 				uint8_t len = 0;
 				data[0] = '$';
@@ -583,9 +578,11 @@ static void example_ble_mesh_custom_model_cb(esp_ble_mesh_model_cb_event_t event
 					data[i * 2 + 1] = value;
 					data[i * 2 + 2] = i == param->client_recv_publish_msg.length - 1 ? ';' : ',';
 				}
+				data[param->client_recv_publish_msg.length*2+1]='\r';
+				data[param->client_recv_publish_msg.length*2+2]='\n';
 				len = sprintf(buf, "%s\r\n", data);
-				ESP_LOGI(TAG, ">>%s", buf);
-				uart_write_bytes(ECHO_UART_PORT_NUM, buf, len);
+				ESP_LOGI(TAG, ">>%x", data);
+				uart_write_bytes(ECHO_UART_PORT_NUM, data, param->client_recv_publish_msg.length*2+3);
 				//test func
 				if (*(param->client_recv_publish_msg.msg) == 5)
 				{
@@ -776,4 +773,13 @@ static void echo_task(void *arg)
 		}
 		vTaskDelay(100 / portTICK_PERIOD_MS);
 	}
+}
+
+void SE_MSGE_Func(void *arg)
+{
+	uint8_t data[15] = {0};
+	uint8_t count = DecodeCommandValue(arg, data);
+	_lightModel light;
+	memcpy(&light, data, 6);
+	example_ble_mesh_publish_message(&light);
 }

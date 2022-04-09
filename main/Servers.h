@@ -1,4 +1,13 @@
 /*
+ * @Author: Wangxiang
+ * @Date: 2022-03-03 13:11:46
+ * @LastEditTime: 2022-03-25 18:17:22
+ * @LastEditors: Wangxiang
+ * @Description: 
+ * @FilePath: /ESPC3_Client_86Prov/main/Servers.h
+ * 江苏大学-王翔
+ */
+/*
  * Servers.h
  *
  *  Created on: 2021年4月13日
@@ -77,7 +86,7 @@ void WriteToNVS_blob(const char *key, void *data, uint16_t len, nvs_handle_t nvs
 
 void CL_PROV_Func(void *arg);
 void RE_FACT_Func(void *arg);
-void SE_MSGE_Func(void *arg);
+// void SE_MSGE_Func(void *arg);
 /** 中间服务API 区域结束**/
 /*******************************************************************************************中间服务API区域结束********/
 

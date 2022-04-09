@@ -1,0 +1,55 @@
+{
+    "configurations": [
+        {
+            "name": "Win32",
+            "includePath": [
+                "${workspaceFolder}/**"
+            ],
+            "windowsSdkVersion": "10.0.19041.0",
+            "compilerPath": "E:/VisualStudio2022/VC/Tools/MSVC/14.31.31103/bin/Hostx64/x64/cl.exe",
+            "cStandard": "c17",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "windows-msvc-x64"
+        },
+        {
+            "name": "ESP32",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "E:/EspIDF/components/**",
+                "E:\\EspIDF\\examples\\**"
+            ],
+            "windowsSdkVersion": "10.0.19041.0",
+            "compilerPath": "C:/Users/wxujs/.espressif/tools/xtensa-esp32-elf/esp-2021r1-8.4.0/xtensa-esp32-elf/bin/xtensa-esp32-elf-gcc.exe",
+            "cStandard": "c11",
+            "cppStandard": "c++14",
+            "intelliSenseMode": "gcc-arm"
+        },
+        {
+            "name": "ESP32C3",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "E:/EspIDF/components/**",
+                "E:\\EspIDF\\examples\\**"
+            ],
+            "windowsSdkVersion": "10.0.19041.0",
+            "compilerPath": "C:\\Users\\wxujs\\.espressif\\tools\\riscv32-esp-elf\\esp-2021r1-8.4.0\\riscv32-esp-elf\\bin\\riscv32-esp-elf-gcc.exe",
+            "cStandard": "c11",
+            "cppStandard": "c++14",
+            "intelliSenseMode": "gcc-arm",
+            "defines": [],
+            "compilerArgs": [],
+            "mergeConfigurations": false,
+            "browse": {
+                "path": [
+                    "${workspaceFolder}/**"
+                ],
+                "limitSymbolsToIncludedHeaders": true
+            },
+            "forcedInclude": [
+                "E:\\EspIDF\\components\\freertos\\port\\riscv\\include\\freertos\\portmacro.h",
+                "${workspaceFolder}\\build\\bootloader\\config\\sdkconfig.h"
+            ]
+        }
+    ],
+    "version": 4
+}

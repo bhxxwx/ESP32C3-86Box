@@ -153,12 +153,15 @@ void RE_FACT_Func(void *arg)
 	FactoryReset();
 }
 
-extern void example_ble_mesh_publish_message(_lightModel *lightModel);
-void SE_MSGE_Func(void *arg)
-{
-	uint8_t data[15] = { 0 };
-	uint8_t count = DecodeCommandValue(arg, data);
-	_lightModel light;
-	memcpy(&light,data,6);
-	example_ble_mesh_publish_message(&light);
-}
+// extern void example_ble_mesh_publish_message(_lightModel *lightModel);
+// void SE_MSGE_Func(void *arg)
+// {
+// 	uint8_t data[15] = { 0 };
+// 	uint8_t count = DecodeCommandValue(arg, data);
+// 	_lightModel light;
+// 	memcpy(&light,data,6);
+
+
+
+// 	example_ble_mesh_publish_message(&light);
+// }
