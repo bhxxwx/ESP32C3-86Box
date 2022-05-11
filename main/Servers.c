@@ -36,7 +36,7 @@ void ProvSet(bool provState,bool factoryMode)
 	{
 		ESP_LOGI("", "BLE Mesh Provisioner Enabled-Normal Mode");
 	}
-	if (esp_ble_mesh_provisioner_set_dev_uuid_match(match, sizeof(match), 0x0, false) != ESP_OK)
+	if (esp_ble_mesh_provisioner_set_dev_uuid_match(match, sizeof(match), 0x0, true) != ESP_OK)
 	{
 		ESP_LOGE("", "Failed to Enabled Provisioner");
 	}
