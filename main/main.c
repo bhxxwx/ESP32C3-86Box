@@ -52,8 +52,8 @@ void OP_PROV_Func(void *arg);
 void CK_HBTK_Func(void *arg);
 static void echo_task(void *arg);
 void SE_MSGE_Func(void *arg);
-
-//void echo_print()
+void TouchData_Func(void *arg);
+// void echo_print()
 static uint8_t dev_uuid[ESP_BLE_MESH_OCTET16_LEN];
 
 static struct example_info_store
@@ -688,7 +688,7 @@ void app_main(void)
 	}
 	ESP_ERROR_CHECK(err);
 
-	board_init();
+	board_init(NVS_USER_HANDLE);
 
 	err = bluetooth_init();
 	if (err != ESP_OK)
@@ -742,8 +742,17 @@ void app_main(void)
 	CommandReg("RE_FACT", RE_FACT_Func);
 	CommandReg("SE_MSGE", SE_MSGE_Func);
 	CommandReg("CK_HBTK", CK_HBTK_Func);
-//	CommandReg("DL_ALND", CK_HBTK_Func);
+	CommandReg("ST_TCHD", TouchData_Func);
+	//	CommandReg("DL_ALND", CK_HBTK_Func);
 	xTaskCreatePinnedToCore(echo_task, "uart_echo_task", ECHO_TASK_STACK_SIZE, NULL, 10, NULL, 0);
+
+}
+
+void TouchData_Func(void *arg)
+{
+	uint8_t data[15] = {0};
+	uint8_t count = DecodeCommandValue(arg, data);
+
 
 }
 

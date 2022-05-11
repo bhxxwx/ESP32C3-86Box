@@ -1,7 +1,7 @@
 /*
  * @Author: Wangxiang
  * @Date: 2022-03-03 13:11:46
- * @LastEditTime: 2022-03-25 18:17:22
+ * @LastEditTime: 2022-05-11 22:28:44
  * @LastEditors: Wangxiang
  * @Description: 
  * @FilePath: /ESPC3_Client_86Prov/main/Servers.h
@@ -69,7 +69,7 @@ void FactoryReset();
 void WriteToNVS(const char *key, uint8_t data, nvs_handle_t nvs_handle);
 uint8_t ReadFromNVS(const char *key, uint8_t *data, nvs_handle_t nvs_handle);
 
-void ReadFromNVS_blob(const char *key, void *data, uint16_t *len, nvs_handle_t nvs_handle);
+esp_err_t ReadFromNVS_blob(const char *key, void *data, uint16_t *len, nvs_handle_t nvs_handle);
 void WriteToNVS_blob(const char *key, void *data, uint16_t len, nvs_handle_t nvs_handle);
 
 /** 系统API 区域结束**/

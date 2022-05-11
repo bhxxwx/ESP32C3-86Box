@@ -110,10 +110,12 @@ void WriteToNVS(const char *key, uint8_t data,nvs_handle_t nvs_handle)
  * @param data 指向存储数据的指针
  * @param len 指向uint16_t数据的指针,返回读取的数据长度
  */
-void ReadFromNVS_blob(const char *key, void *data, uint16_t *len,nvs_handle_t nvs_handle)
+esp_err_t ReadFromNVS_blob(const char *key, void *data, uint16_t *len, nvs_handle_t nvs_handle)
 {
-	nvs_get_blob(nvs_handle, key, NULL, (size_t*) len);
+	esp_err_t err;
+	err=nvs_get_blob(nvs_handle, key, NULL, (size_t *)len);
 	nvs_get_blob(nvs_handle, key, data, (size_t*)len);
+	return err;
 }
 
 /**
