@@ -535,7 +535,6 @@ void example_ble_mesh_publish_message(_lightModel *lightModel)
 
 static void example_ble_mesh_custom_model_cb(esp_ble_mesh_model_cb_event_t event, esp_ble_mesh_model_cb_param_t *param)
 {
-	static int64_t start_time;
 	ESP_LOGI(TAG, "example_ble_mesh_custom_model_cb EVENT:0x%04x", event);
 	switch (event)
 	{
@@ -560,7 +559,6 @@ static void example_ble_mesh_custom_model_cb(esp_ble_mesh_model_cb_event_t event
 				ESP_LOGE(TAG, "Failed to send message 0x%06x", param->model_send_comp.opcode);
 				break;
 			}
-			start_time = esp_timer_get_time();
 			ESP_LOGI(TAG, "Send 0x%06x", param->model_send_comp.opcode);
 			break;
 		case ESP_BLE_MESH_CLIENT_MODEL_RECV_PUBLISH_MSG_EVT:
@@ -568,28 +566,35 @@ static void example_ble_mesh_custom_model_cb(esp_ble_mesh_model_cb_event_t event
 			ESP_LOGI(TAG, "Receive publish message 0x%06x", param->client_recv_publish_msg.opcode);
 			if (param->client_recv_publish_msg.opcode == 0xc302e5)
 			{
-				char data[22] = { 0 };
-				char buf[22] = { 0 };
-				uint8_t len = 0;
-				data[0] = '$';
-				for (int i = 0; i < param->client_recv_publish_msg.length; i++)
-				{
-					uint8_t value = *(param->client_recv_publish_msg.msg + i);
-					data[i * 2 + 1] = value;
-					data[i * 2 + 2] = i == param->client_recv_publish_msg.length - 1 ? ';' : ',';
-				}
-				data[param->client_recv_publish_msg.length*2+1]='\r';
-				data[param->client_recv_publish_msg.length*2+2]='\n';
-				len = sprintf(buf, "%s\r\n", data);
-				ESP_LOGI(TAG, ">>%x", data);
-				uart_write_bytes(ECHO_UART_PORT_NUM, data, param->client_recv_publish_msg.length*2+3);
+				// char data[22] = { 0 };
+				// char buf[22] = { 0 };
+				// uint8_t len = 0;
+				// data[0] = '$';
+				// for (int i = 0; i < param->client_recv_publish_msg.length; i++)
+				// {
+				// 	uint8_t value = *(param->client_recv_publish_msg.msg + i);
+				// 	data[i * 2 + 1] = value;
+				// 	data[i * 2 + 2] = i == param->client_recv_publish_msg.length - 1 ? ';' : ',';
+				// }
+				// data[param->client_recv_publish_msg.length*2+1]='\r';
+				// data[param->client_recv_publish_msg.length*2+2]='\n';
+				// len = sprintf(buf, "%s\r\n", data);
+				
+				// uart_write_bytes(ECHO_UART_PORT_NUM, data, param->client_recv_publish_msg.length*2+3);
+				IRC_t rc_data;
+				memset(&rc_data,0,sizeof(IRC_t));
+				rc_data.op_code = *(param->client_recv_publish_msg.msg + 0);
+				rc_data.op_code = *(param->client_recv_publish_msg.msg + 1);
+				rc_data.op_code = *(param->client_recv_publish_msg.msg + 2);
+				ESP_LOGI("RECV RC DATA", ">>%x %x %x", rc_data.op_code, rc_data.func_code, rc_data.value_code);
+				remote_controler_opc(&rc_data);
 				//test func
-				if (*(param->client_recv_publish_msg.msg) == 5)
-				{
-					_lightModel l;
-					l.CMD = *(param->client_recv_publish_msg.msg+1);
-					example_ble_mesh_publish_message(&l);
-				}
+				// if (*(param->client_recv_publish_msg.msg) == 5)
+				// {
+				// 	_lightModel l;
+				// 	l.CMD = *(param->client_recv_publish_msg.msg+1);
+				// 	example_ble_mesh_publish_message(&l);
+				// }
 				//end text func
 			}
 			break;
@@ -751,9 +756,14 @@ void app_main(void)
 void TouchData_Func(void *arg)
 {
 	uint8_t data[15] = {0};
-	uint8_t count = DecodeCommandValue(arg, data);
-
-
+	uint8_t len = 0;
+	len=DecodeCommandValue(arg, data);
+	ITouchPad_t TouchPadData;
+	TouchPadData.wheel = (data[0] << 8 )+ data[1];
+	TouchPadData.left_slider = data[2];
+	TouchPadData.right_slider = data[3];
+	TouchPadData.btns = data[4];
+	light_opc(&TouchPadData);
 }
 
 void OP_PROV_Func(void *arg)
@@ -771,13 +781,14 @@ static void echo_task(void *arg)
 	while (1)
 	{
 		// Read data from the UART
-		int len = uart_read_bytes(ECHO_UART_PORT_NUM, data, BUF_SIZE, 10 / portTICK_RATE_MS);
+		int len = uart_read_bytes(ECHO_UART_PORT_NUM, data, BUF_SIZE, 20 / portTICK_RATE_MS);
 		if (len > 7)
 		{
 			data[len] = 0;
 			ESP_LOGI("echo_task", "<<%s", data);
 			if (DecodeCommandHead(len, (char*) data))
 				uart_write_bytes(ECHO_UART_PORT_NUM, ">>CMD_OK\r\n", 10);
+			
 			bzero(data, BUF_SIZE);
 		}
 		vTaskDelay(100 / portTICK_PERIOD_MS);

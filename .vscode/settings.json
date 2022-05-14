@@ -1,4 +1,12 @@
 {
     "idf.adapterTargetName": "esp32c3",
-    "C_Cpp.errorSquiggles": "Disabled"
+    "C_Cpp.errorSquiggles": "Disabled",
+    "files.associations": {
+        "*.H": "c",
+        "*.C": "c",
+        "limits": "c",
+        "type_traits": "c"
+    },
+    "idf.portWin": "COM11",
+    "idf.flashType": "UART"
 }

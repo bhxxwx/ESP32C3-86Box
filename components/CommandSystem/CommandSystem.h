@@ -1,4 +1,13 @@
 /*
+ * @Author: Wangxiang
+ * @Date: 2022-03-04 10:54:56
+ * @LastEditTime: 2022-05-12 13:03:32
+ * @LastEditors: Wangxiang
+ * @Description: 
+ * @FilePath: /ESPC3_Client_86Prov/components/CommandSystem/CommandSystem.h
+ * 江苏大学-王翔
+ */
+/*
  * CommandSystem.h
  *
  *  Created on: 2022年3月4日
@@ -20,8 +29,8 @@
 #define ECHO_TEST_RXD (20)//RXD引脚号
 #elif(USEUART==1)
 #define ECHO_UART_PORT_NUM      (1)
-#define ECHO_TEST_TXD (5)//TXD引脚号
-#define ECHO_TEST_RXD (4)//RXD引脚号
+#define ECHO_TEST_TXD (4)//TXD引脚号
+#define ECHO_TEST_RXD (5)//RXD引脚号
 #endif
 #define ECHO_TEST_RTS (UART_PIN_NO_CHANGE)
 #define ECHO_TEST_CTS (UART_PIN_NO_CHANGE)
