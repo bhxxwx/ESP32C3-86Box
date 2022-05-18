@@ -1,7 +1,7 @@
 /*
  * @Author: Wangxiang
  * @Date: 2022-02-23 10:36:05
- * @LastEditTime: 2022-05-13 16:58:53
+ * @LastEditTime: 2022-05-18 16:48:27
  * @LastEditors: Wangxiang
  * @Description:
  * @FilePath: /ESPC3_Client_86Prov/main/board.c
@@ -18,9 +18,16 @@
 
 #define BUTTON_IO_NUM 9
 #define BUTTON_ACTIVE_LEVEL 0
+#define LED_ELEMET(pin, hz)   \
+    {                         \
+        .blink_pin = pin,     \
+        .start_flg = false,   \
+        .level_flg = 1,       \
+        .normal_level_flg = 0 \
+    }
 
 static TimerHandle_t save_timer_handle;
-static TimerHandle_t toggle_timer_handle;
+static TimerHandle_t auto_close_timer_handle;
 static TimerHandle_t prov_timer_handle;
 static TimerHandle_t blink_timer_handle;
 static nvs_handle_t user_nvs_handle;
@@ -36,18 +43,32 @@ static light_hal_t sense[2] = {0};
 static bool toogle_timer_start_flg = false;
 
 static bool need_send2_light = false;
+static bool relay_tick_flg = false;
+static bool is_first_time_open_relay = true;
 
-extern void Del_all_node();
+blink_t led_blink_state[LED_NUMBER] =
+    {
+        LED_ELEMET(LED_ONOFF_PIN, 100),
+        LED_ELEMET(LED_CCT_PIN, 100),
+        LED_ELEMET(LED_RGB_PIN, 100),
+        LED_ELEMET(LED_M1_PIN, 100),
+        LED_ELEMET(LED_M2_PIN, 100),
+        LED_ELEMET(LED_AUTO_PIN, 100),
+};
+
+extern void
+Del_all_node();
 extern void example_ble_mesh_publish_message(_lightModel *lightModel);
 void RGB_TO_HSV(const COLOR_RGB *input, COLOR_HSV *output);
 static void HSV_TO_RGB(COLOR_HSV *input, COLOR_RGB *output);
 void save_light();
-void toggle_light();
+void auto_close_light();
 void prov_timer_func();
 void blink_timer_func();
 
 void board_init(nvs_handle_t nvs_handle)
 {
+    uint8_t data = 0;
     user_nvs_handle = nvs_handle;
     interface_touch_status.halo_angle = 360;
     interface_touch_status.halo_brightness = 100;
@@ -88,26 +109,32 @@ void board_init(nvs_handle_t nvs_handle)
 
         WriteToNVS_blob("Slight_hal", &interface_touch_status, sizeof(light_hal_t), user_nvs_handle);
     }
-    gpio_config_t gpio_conf;
+    gpio_config_t gpio_conf={};
     gpio_conf.pin_bit_mask = (1ULL << LED_ONOFF_PIN) | (1UL << LED_CCT_PIN) | (1UL << LED_RGB_PIN) | (1UL << LED_M1_PIN) | (1UL << LED_M2_PIN) | (1UL << LED_AUTO_PIN);
     gpio_conf.mode = GPIO_MODE_OUTPUT;
-    gpio_config(&gpio_conf);
+    gpio_conf.intr_type = GPIO_INTR_DISABLE;
+    gpio_conf.pull_down_en = 0;
+    gpio_conf.pull_up_en = 0;
+    esp_err_t err= gpio_config(&gpio_conf);
+    ESP_LOGI("haha", "%d", err);
+
+    // led_blink_state[0];
 
     change_halo_light(&light_status, interface_touch_status.halo_angle, interface_touch_status.halo_brightness);
     change_main_light(&light_status, interface_touch_status.main_colortemp, interface_touch_status.main_brightness);
     save_timer_handle = xTimerCreate("TimeToSave", pdMS_TO_TICKS(15000), false, NULL, save_light);
-    toggle_timer_handle = xTimerCreate("ToggleLight", pdMS_TO_TICKS(60000), false, NULL, toggle_light);
-    prov_timer_handle = xTimerCreate("provtimer", pdMS_TO_TICKS(30000), false, NULL, prov_timer_func);
-    blink_timer_handle = xTimerCreate("blink", pdMS_TO_TICKS(1000), true, NULL, blink_timer_func);
-    // board_button_init();
-    // xTaskCreatePinnedToCore(save_light_task, "save_light_task", ECHO_TASK_STACK_SIZE, NULL, 9, &xTaskSaveLight, 0);
-    // vTaskSuspend(xTaskSaveLight);
+    auto_close_timer_handle = xTimerCreate("CloseLight", pdMS_TO_TICKS(60000), false, NULL, auto_close_light);
+    prov_timer_handle = xTimerCreate("provtimer", pdMS_TO_TICKS(50000), false, NULL, prov_timer_func);
+    blink_timer_handle = xTimerCreate("blink", pdMS_TO_TICKS(100), true, NULL, blink_timer_func);
+    xTimerStart(blink_timer_handle, 100);
+    uart_write_bytes(ECHO_UART_PORT_NUM, &data, 1);
+    close_led(LED_ALL);
+    open_led(LED_CCT);
 }
-
 
 /**
  * @brief timer to save light status
- * 
+ *
  */
 void save_light()
 {
@@ -117,42 +144,184 @@ void save_light()
 }
 
 /**
- * @brief timer to toggle light
- * 
+ * @brief timer to close light
+ *
  */
-void toggle_light()
+void auto_close_light()
 {
-    if (all_light_onoff_state)
-    {
+    // if (all_light_onoff_state)
+    // {
         memset(&light_status, 0, sizeof(_lightModel));
         all_light_onoff_state = false;
         halo_light_onoff_state = false;
         main_light_onoff_state = false;
-    }
-    else
-    {
-        all_light_onoff_state = true;
-        change_halo_light(&light_status, interface_touch_status.halo_angle, interface_touch_status.halo_brightness);
-        change_main_light(&light_status, interface_touch_status.main_colortemp, interface_touch_status.main_brightness);
-        halo_light_onoff_state = true;
-        main_light_onoff_state = true;
-    }
-    // xTimerStop(toggle_timer_handle, 100);
+        close_relay();
+    // }
+    // else
+    // {
+    //     open_relay();
+    //     all_light_onoff_state = true;
+    //     change_halo_light(&light_status, interface_touch_status.halo_angle, interface_touch_status.halo_brightness);
+    //     change_main_light(&light_status, interface_touch_status.main_colortemp, interface_touch_status.main_brightness);
+    //     halo_light_onoff_state = true;
+    //     main_light_onoff_state = true;
+    // }
+    // xTimerStop(auto_close_timer_handle, 100);
     example_ble_mesh_publish_message(&light_status);
     toogle_timer_start_flg = false;
+    close_led(LED_AUTO_PIN);
 }
 
 /**
  * @brief timer to close prov
- * 
+ *
  */
 void prov_timer_func()
 {
     ProvSet(false, false);
+    stop_blink_led(LED_ALL);
 }
 
+/**
+ * @brief 100ms tick
+ *
+ */
 void blink_timer_func()
 {
+    if (relay_tick_flg == false)
+        blink_tick();
+    relay_reset_tick();
+}
+
+/**
+ * @brief 100ms tick
+ *
+ */
+void relay_reset_tick()
+{
+    static uint8_t time_count = 0;
+    static bool relay_flg = 0;
+    static uint8_t count;
+    if (relay_tick_flg)
+    {
+        uint8_t data;
+        time_count++;
+        if (time_count >= 15) // 1.5s
+        {
+            data = relay_flg;
+            relay_flg = !relay_flg;
+            uart_write_bytes(ECHO_UART_PORT_NUM, &data, 1);
+            set_led(LED_ALL, data, false);
+            time_count = 0;
+            count++;
+            if (count >= 10 && data == 1)
+            {
+                relay_tick_flg = false;
+                count = 0;
+                relay_flg = 0;
+                blink_led(LED_ALL, 5, 0);
+            }
+        }
+    }
+}
+
+void open_relay()
+{
+    uint8_t data;
+    data = 1;
+    uart_write_bytes(ECHO_UART_PORT_NUM, &data, 1);
+    if (is_first_time_open_relay)
+    {
+        esp_rom_delay_us(80000);
+    }
+    is_first_time_open_relay = false;
+}
+void close_relay()
+{
+    uint8_t data;
+    data = 0;
+    uart_write_bytes(ECHO_UART_PORT_NUM, &data, 1);
+    is_first_time_open_relay = true;
+}
+void blink_led(uint16_t led_pin, uint16_t blink_ms, uint16_t cycle)
+{
+    for (int i = 0; i < LED_NUMBER; i++)
+    {
+        if (((led_pin >> i) & 0x0001) == 0x0001)
+        {
+            led_blink_state[i].count = 0;
+            led_blink_state[i].start_flg = true;
+            led_blink_state[i].target_count = blink_ms;
+            led_blink_state[i].level_flg = 1;
+            led_blink_state[i].target_cycle = cycle * 2;
+            led_blink_state[i].cycle_count = 0;
+        }
+    }
+}
+
+void blink_tick()
+{
+    for (int i = 0; i < LED_NUMBER; i++)
+    {
+        if (led_blink_state[i].start_flg == true)
+        {
+            led_blink_state[i].count++;
+            if (led_blink_state[i].count >= led_blink_state[i].target_count)
+            {
+                led_blink_state[i].count = 0;
+                gpio_set_level(led_blink_state[i].blink_pin, led_blink_state[i].level_flg);
+                led_blink_state[i].level_flg = !led_blink_state[i].level_flg;
+                if (led_blink_state[i].target_cycle == 0)
+                {
+                    continue;
+                }
+                led_blink_state[i].cycle_count++;
+            }
+
+            if (led_blink_state[i].cycle_count >= led_blink_state[i].target_cycle)
+            {
+                led_blink_state[i].start_flg = false;
+                led_blink_state[i].count = 0;
+                led_blink_state[i].cycle_count = 0;
+                gpio_set_level(led_blink_state[i].blink_pin, led_blink_state[i].normal_level_flg);
+            }
+        }
+    }
+}
+void stop_blink_led(uint16_t led_pin)
+{
+    for (int i = 0; i < LED_NUMBER; i++)
+    {
+        if (((led_pin >> i) & 0x0001) == 0x0001)
+        {
+            led_blink_state[i].start_flg = false;
+            led_blink_state[i].count = 0;
+            gpio_set_level(led_blink_state[i].blink_pin, led_blink_state[i].normal_level_flg);
+        }
+    }
+}
+
+void close_led(uint16_t led_pin)
+{
+    set_led(led_pin, 0, true);
+}
+
+void open_led(uint16_t led_pin)
+{
+    set_led(led_pin, 1, true);
+}
+
+void set_led(uint16_t led_pin, uint8_t level, bool normal_flg)
+{
+    for (int i = 0; i < LED_NUMBER; i++)
+    {
+        if (((led_pin >> i) & 0x0001) == 0x0001)
+        {
+            if (normal_flg)
+                led_blink_state[i].normal_level_flg = level;
+            gpio_set_level(led_blink_state[i].blink_pin, level);
+        }
+    }
 }
 
 /**
@@ -323,12 +492,12 @@ void remote_controler_opc(IRC_t *RemoteControllerData)
         all_light_onoff_state = true;
         break;
     }
-    case enum_rc_op_sense_set://first byte is save sense
+    case enum_rc_op_sense_set: // first byte is save sense
     {
-        char str[6]={0};
+        char str[6] = {0};
         uint8_t len = 0;
-        len=sprintf(str,"sense%d", RemoteControllerData->func_code);
-        if(len==6)
+        len = sprintf(str, "sense%d", RemoteControllerData->func_code);
+        if (len == 6)
         {
             memcpy(&sense[RemoteControllerData->func_code - 1], &interface_touch_status, sizeof(light_hal_t));
             WriteToNVS_blob(str, &sense[RemoteControllerData->func_code - 1], sizeof(light_hal_t), user_nvs_handle);
@@ -360,6 +529,9 @@ void light_opc(ITouchPad_t *TouchPadData)
     {
     case enum_no_btn: // no buttons pressed, change the light by slider and wheel
     {
+        set_led(LED_M1, 0, true);
+        set_led(LED_M2, 0, true);
+        open_relay();
         if (TouchPadData->wheel != 0xFFFF)
         {
             ESP_LOGI("BOARD", "WHEEL:%d", TouchPadData->wheel);
@@ -398,32 +570,45 @@ void light_opc(ITouchPad_t *TouchPadData)
     case enum_CCT: // CCT button pressed, remap right slider funcion
     {
         selected_light = main_selected;
+        set_led(LED_CCT_PIN, 1, true);
+        set_led(LED_RGB_PIN, 0, true);
         break;
     }
     case enum_RGB: // RGB button pressed, remap right slider function
     {
         selected_light = halo_selected;
+        set_led(LED_CCT, 0, true);
+        set_led(LED_RGB, 1, true);
         break;
     }
 
     case enum_onoff: // onoff button pressed, toggle the light
     {
+        set_led(LED_M1, 0, true);
+        set_led(LED_M2, 0, true);
         if (all_light_onoff_state) // any light(main/halo) is open
         {
             memset(&light_status, 0, sizeof(_lightModel)); // close all
             all_light_onoff_state = false;
+            close_relay();
         }
         else // open light by last status
         {
+            open_relay();
             all_light_onoff_state = true;
             change_halo_light(&light_status, interface_touch_status.halo_angle, interface_touch_status.halo_brightness);
             change_main_light(&light_status, interface_touch_status.main_colortemp, interface_touch_status.main_brightness);
+            
         }
+
         need_send2_light = true;
         break;
     }
     case enum_m1: // sense1 button pressed, change light to this
     {
+        set_led(LED_M1, 1, true);
+        set_led(LED_M2, 0, true);
+        open_relay();
         change_halo_light(&light_status, sense[0].halo_angle, sense[0].halo_brightness);
         change_main_light(&light_status, sense[0].main_colortemp, sense[0].main_brightness);
         need_send2_light = true;
@@ -432,6 +617,9 @@ void light_opc(ITouchPad_t *TouchPadData)
     }
     case enum_m2: // sense2 button pressed, change light to this
     {
+        set_led(LED_M1, 0, true);
+        set_led(LED_M2, 1, true);
+        open_relay();
         change_halo_light(&light_status, sense[1].halo_angle, sense[1].halo_brightness);
         change_main_light(&light_status, sense[1].main_colortemp, sense[1].main_brightness);
         need_send2_light = true;
@@ -440,6 +628,8 @@ void light_opc(ITouchPad_t *TouchPadData)
     }
     case enum_m1_long: // long press m1 button, save current status to sense1
     {
+        set_led(LED_M1, 1, true);
+        blink_led(LED_M1, 10, 10);
         // sense[0].halo_angle = interface_touch_status.halo_angle;
         memcpy(&sense[0], &interface_touch_status, sizeof(light_hal_t));
         WriteToNVS_blob("sense1", &sense[0], sizeof(light_hal_t), user_nvs_handle);
@@ -451,22 +641,32 @@ void light_opc(ITouchPad_t *TouchPadData)
         WriteToNVS_blob("sense1", &sense[1], sizeof(light_hal_t), user_nvs_handle);
         break;
     }
-    case enum_60s: // auto-toggle button pressed
+    case enum_60s: // auto-close button pressed
     {
         if (toogle_timer_start_flg == false) // if the timer isnot open, start the timer
         {
-            xTimerReset(toggle_timer_handle, 100);
+            xTimerReset(auto_close_timer_handle, 100);
             toogle_timer_start_flg = true;
+            //open the light
+            open_relay();
+            all_light_onoff_state = true;
+            change_halo_light(&light_status, interface_touch_status.halo_angle, interface_touch_status.halo_brightness);
+            change_main_light(&light_status, interface_touch_status.main_colortemp, interface_touch_status.main_brightness);
+            halo_light_onoff_state = true;
+            main_light_onoff_state = true;
+            need_send2_light = true;
         }
         else // if the timer is open, close the timer
         {
-            xTimerStop(toggle_timer_handle, 100);
+            xTimerStop(auto_close_timer_handle, 100);
             toogle_timer_start_flg = false;
         }
         break;
     }
     case enum_rest: // long press on-off button, rest the light node and start prov
     {
+        set_led(LED_ALL, 1, false);
+        relay_tick_flg = true;
         xTimerStart(prov_timer_handle, 100);
         Del_all_node();
         ProvSet(true, false);
@@ -477,9 +677,14 @@ void light_opc(ITouchPad_t *TouchPadData)
     case enum_hall: // hall sensor, means need to prov remote controller
     {
         xTimerStart(prov_timer_handle, 100);
+        blink_led(LED_ALL, 5,5);
         ProvSet(true, false);
     }
-    default:
+    case enum_calibrate:
+    {
+        blink_led(LED_ALL, 1, 5);
+        break;
+    } default:
         break;
     }
 

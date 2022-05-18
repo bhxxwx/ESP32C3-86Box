@@ -584,8 +584,8 @@ static void example_ble_mesh_custom_model_cb(esp_ble_mesh_model_cb_event_t event
 				IRC_t rc_data;
 				memset(&rc_data,0,sizeof(IRC_t));
 				rc_data.op_code = *(param->client_recv_publish_msg.msg + 0);
-				rc_data.op_code = *(param->client_recv_publish_msg.msg + 1);
-				rc_data.op_code = *(param->client_recv_publish_msg.msg + 2);
+				rc_data.func_code = *(param->client_recv_publish_msg.msg + 1);
+				rc_data.value_code = *(param->client_recv_publish_msg.msg + 2);
 				ESP_LOGI("RECV RC DATA", ">>%x %x %x", rc_data.op_code, rc_data.func_code, rc_data.value_code);
 				remote_controler_opc(&rc_data);
 				//test func
